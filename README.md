@@ -77,7 +77,7 @@ _Pending deployment (Part 6)._
 ## Progress
 
 - [x] Part 0 — Repository skeleton
-- [ ] Part 1 — Auth0 tenant, SPA application, API
+- [x] Part 1 — Auth0 tenant, SPA application, API
 - [ ] Part 2 — Spring Boot backend (local)
 - [ ] Part 3 — React frontend (local)
 - [ ] Part 4 — Server preparation and Duck DNS
@@ -85,9 +85,46 @@ _Pending deployment (Part 6)._
 - [ ] Part 6 — Apache and HTTPS
 - [ ] Part 7 — Verification and evidence
 
+## Auth0 configuration
+
+Two resources were created in the Auth0 tenant. None of the values below are
+secrets: the domain, client ID, and audience are meant to be embedded in a
+browser application. The client secret (if shown by Auth0) is never used, since
+this is a Single-Page Application.
+
+| Resource | Name | Value |
+|---|---|---|
+| Application (SPA) | `Enterprise Risk Lab Frontend` | Domain: `dev-eeuv3wthjtjchg5x.us.auth0.com` |
+| Application (SPA) | `Enterprise Risk Lab Frontend` | Client ID: `TKskNNIdaipO1ISxzbQf1sobegMoAJTW` |
+| API | `Enterprise Risk Lab API` | Identifier (audience): `https://enterprise-risk-api` |
+| API | `Enterprise Risk Lab API` | Signing algorithm: `RS256` |
+
+Allowed Callback/Logout/Web Origin URLs for the SPA are currently set to
+`http://localhost:5173` for local development. They will be extended with the
+production Duck DNS URL in Part 6.
+
+**Evidence**
+
+SPA `Enterprise Risk Lab Frontend` created:
+
+![SPA Enterprise Risk Lab Frontend created](docs/images/01-auth0-spa-created.png)
+
+API `Enterprise Risk Lab API` created:
+
+![API Enterprise Risk Lab API created](docs/images/02-auth0-api-created.png)
+
+API general settings (identifier):
+
+![API general settings showing the identifier](docs/images/03-auth0-api-general-settings.png)
+
+API token settings (RS256, JWE disabled):
+
+![API token settings showing RS256 signing algorithm](docs/images/04-auth0-api-token-settings.png)
+
 ## Repository structure
 
 ```
-frontend/   React application (added in Part 3)
-backend/    Spring Boot application (added in Part 2)
+frontend/     React application (added in Part 3)
+backend/      Spring Boot application (added in Part 2)
+docs/images/  Evidence screenshots gathered throughout the workshop
 ```
