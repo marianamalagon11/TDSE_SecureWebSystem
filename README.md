@@ -79,7 +79,7 @@ _Pending deployment (Part 6)._
 - [x] Part 0 — Repository skeleton
 - [x] Part 1 — Auth0 tenant, SPA application, API
 - [x] Part 2 — Spring Boot backend (local)
-- [ ] Part 3 — React frontend (local)
+- [x] Part 3 — React frontend (local)
 - [ ] Part 4 — Server preparation and Duck DNS
 - [ ] Part 5 — Backend deployment (systemd)
 - [ ] Part 6 — Apache and HTTPS
@@ -103,6 +103,14 @@ Allowed Callback/Logout/Web Origin URLs for the SPA are currently set to
 `http://localhost:5173` for local development. They will be extended with the
 production Duck DNS URL in Part 6.
 
+Note: the workshop instructions do not mention it, but newly created Auth0 APIs
+require each application to be explicitly authorized before it can request tokens
+for that audience. Without this, the login flow fails with
+`invalid_request: Client "..." is not authorized to access resource server "..."`.
+This was granted under API → **Application Access** → `Enterprise Risk Lab Frontend`
+→ User-Delegated Access → Grant Access (no scopes were defined for this API, so no
+permissions needed to be selected).
+
 **Evidence**
 
 SPA `Enterprise Risk Lab Frontend` created:
@@ -120,6 +128,10 @@ API general settings (identifier):
 API token settings (RS256, JWE disabled):
 
 ![API token settings showing RS256 signing algorithm](docs/images/04-auth0-api-token-settings.png)
+
+`Enterprise Risk Lab Frontend` granted user-delegated access to the API:
+
+![Application Access tab showing the frontend granted access](docs/images/05-auth0-application-access-granted.png)
 
 ## Backend (local)
 
@@ -150,6 +162,34 @@ $ curl -i http://localhost:8080/actuator/health
 HTTP/1.1 200
 {"groups":["liveness","readiness"],"status":"UP"}
 ```
+
+## Frontend (local)
+
+Built with Vite (React template) and `@auth0/auth0-react`.
+
+- `main.jsx`: wraps the app in `Auth0Provider`, configured from `.env.local`
+  (`domain`, `clientId`, `audience` — none of these are secrets for a SPA).
+- `App.jsx`: shows a login button when signed out; once signed in, it reads the
+  access token with `getAccessTokenSilently()` and calls `GET /api/risk-status`
+  with `Authorization: Bearer <token>`.
+
+**Deliverable — successful authenticated API call**
+
+Initial state, signed out:
+
+![Frontend initial state, signed out](docs/images/06-frontend-initial-state.png)
+
+Auth0 Universal Login screen:
+
+![Auth0 login screen](docs/images/07-frontend-login-screen.png)
+
+Signed in:
+
+![Signed in to the frontend](docs/images/08-frontend-logged-in.png)
+
+Successful authenticated call to the protected API:
+
+![Successful authenticated call to the protected API](docs/images/09-frontend-authenticated-api-call.png)
 
 ## Repository structure
 
