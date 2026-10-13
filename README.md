@@ -78,7 +78,7 @@ _Pending deployment (Part 6)._
 
 - [x] Part 0 — Repository skeleton
 - [x] Part 1 — Auth0 tenant, SPA application, API
-- [ ] Part 2 — Spring Boot backend (local)
+- [x] Part 2 — Spring Boot backend (local)
 - [ ] Part 3 — React frontend (local)
 - [ ] Part 4 — Server preparation and Duck DNS
 - [ ] Part 5 — Backend deployment (systemd)
@@ -120,6 +120,36 @@ API general settings (identifier):
 API token settings (RS256, JWE disabled):
 
 ![API token settings showing RS256 signing algorithm](docs/images/04-auth0-api-token-settings.png)
+
+## Backend (local)
+
+Generated with Spring Initializr (Java 21, Maven, Spring Boot 4.1.1) with the Web,
+Security, OAuth2 Resource Server, and Actuator starters.
+
+- `SecurityConfig.java`: defines the security filter chain. `/actuator/health` is
+  public, `/api/**` requires a valid JWT, everything else is denied by default. CORS
+  is restricted to the frontend's dev and production origins.
+- `RiskController.java`: exposes `GET /api/risk-status`, the single protected
+  endpoint, returning the authenticated user's subject claim.
+- `application.properties`: configures the resource server with the Auth0
+  `issuer-uri` and `audiences`, so Spring Security both verifies the JWT signature
+  (via Auth0's published JWKS) and rejects tokens issued for a different API.
+
+Note: the workshop instructions list only Web, Security, and OAuth2 Resource Server
+as dependencies, but reference `/actuator/health` for the local check and later for
+the production health check (Part 5). The Actuator starter was added for that
+endpoint to exist.
+
+Verified locally:
+
+```
+$ curl -i http://localhost:8080/api/risk-status
+HTTP/1.1 401
+
+$ curl -i http://localhost:8080/actuator/health
+HTTP/1.1 200
+{"groups":["liveness","readiness"],"status":"UP"}
+```
 
 ## Repository structure
 
