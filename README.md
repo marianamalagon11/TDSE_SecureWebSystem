@@ -80,7 +80,7 @@ _Pending deployment (Part 6)._
 - [x] Part 1 — Auth0 tenant, SPA application, API
 - [x] Part 2 — Spring Boot backend (local)
 - [x] Part 3 — React frontend (local)
-- [ ] Part 4 — Server preparation and Duck DNS
+- [x] Part 4 — Server preparation and Duck DNS
 - [ ] Part 5 — Backend deployment (systemd)
 - [ ] Part 6 — Apache and HTTPS
 - [ ] Part 7 — Verification and evidence
@@ -195,6 +195,54 @@ Signed in:
 Successful authenticated call to the protected API:
 
 ![Successful authenticated call to the protected API](docs/images/09-frontend-authenticated-api-call.png)
+
+## Server and Duck DNS
+
+- **EC2 instance**: Ubuntu Server 26.04 LTS, `t3.micro`.
+  - The workshop instructions assume Ubuntu (`apt`, `apache2`, `a2enmod`/`a2ensite`)
+    for Parts 4-6. The instance was first launched from an Amazon Linux AMI by
+    mistake (`ec2-user` as the SSH user); it was replaced with an Ubuntu instance to
+    match the instructions exactly, reusing the same key pair and security group so
+    no network configuration had to be redone.
+- **Elastic IP**: `54.173.61.98`, associated with the instance so the public address
+  survives stop/start cycles (a plain EC2 public IP changes on every restart).
+- **Security group inbound rules**: `22` (SSH, restricted to a single source IP),
+  `80` (HTTP), `443` (HTTPS). No rule for `8080` — the backend is never reachable
+  from the public internet.
+- **Public hostname**: `enterprise-risk-lab-mariana.duckdns.org`, pointed at the
+  Elastic IP through Duck DNS. The Duck DNS token is not stored anywhere in this
+  repository.
+- **Packages installed** (`apt install apache2 certbot python3-certbot-apache
+  openjdk-21-jre`): Apache 2.4.66, certbot 4.0.0, OpenJDK 21.0.12.1.
+- The network-level firewall is the EC2 security group above (default-deny, only
+  80/443/22 open); no additional host firewall was layered on top of it.
+
+Verified: `http://enterprise-risk-lab-mariana.duckdns.org` returns the default
+Apache page (`HTTP 200`, `Server: Apache/2.4.66 (Ubuntu)`) — confirms the DNS,
+Elastic IP, security group, and Apache installation all work together before any
+application-specific configuration (Parts 5-6) is added.
+
+**Evidence**
+
+Security group inbound rules (SSH restricted, HTTP/HTTPS public, no 8080):
+
+![Security group inbound rules](docs/images/11-security-group-rules.png)
+
+Elastic IP associated with the instance:
+
+![Elastic IP associated with the EC2 instance](docs/images/12-elastic-ip-associated.png)
+
+Duck DNS subdomain updated to the Elastic IP:
+
+![Duck DNS confirming the IP update](docs/images/13-duckdns-ip-updated.png)
+
+SSH connection details confirming the Ubuntu instance and key pair:
+
+![SSH connect panel showing the ubuntu user and firstKey pair](docs/images/14-ssh-ubuntu-instance-confirmed.png)
+
+`curl -I` against the public Duck DNS hostname, confirming Apache responds:
+
+![curl showing HTTP 200 from Apache via the Duck DNS hostname](docs/images/15-apache-http-200-verification.png)
 
 ## Repository structure
 
