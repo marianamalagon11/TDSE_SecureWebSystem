@@ -98,18 +98,17 @@ this is a Single-Page Application.
 | Application (SPA) | `Enterprise Risk Lab Frontend` | Client ID: `TKskNNIdaipO1ISxzbQf1sobegMoAJTW` |
 | API | `Enterprise Risk Lab API` | Identifier (audience): `https://enterprise-risk-api` |
 | API | `Enterprise Risk Lab API` | Signing algorithm: `RS256` |
+| API Permission | `read:risk` | Read the protected risk status |
 
 Allowed Callback/Logout/Web Origin URLs for the SPA are currently set to
 `http://localhost:5173` for local development. They will be extended with the
 production Duck DNS URL in Part 6.
 
-Note: the workshop instructions do not mention it, but newly created Auth0 APIs
-require each application to be explicitly authorized before it can request tokens
-for that audience. Without this, the login flow fails with
+`Enterprise Risk Lab Frontend` was granted **User-Delegated Access** (not Client
+Access, which is for machine-to-machine applications and would not authorize a
+browser login) to `Enterprise Risk Lab API`, with the `read:risk` permission
+selected. Without this authorization, the login flow fails with
 `invalid_request: Client "..." is not authorized to access resource server "..."`.
-This was granted under API → **Application Access** → `Enterprise Risk Lab Frontend`
-→ User-Delegated Access → Grant Access (no scopes were defined for this API, so no
-permissions needed to be selected).
 
 **Evidence**
 
@@ -132,6 +131,10 @@ API token settings (RS256, JWE disabled):
 `Enterprise Risk Lab Frontend` granted user-delegated access to the API:
 
 ![Application Access tab showing the frontend granted access](docs/images/05-auth0-application-access-granted.png)
+
+`read:risk` permission defined on the API and granted to the frontend:
+
+![read:risk permission granted under User-Delegated Access](docs/images/10-auth0-read-risk-permission-granted.png)
 
 ## Backend (local)
 
@@ -171,7 +174,9 @@ Built with Vite (React template) and `@auth0/auth0-react`.
   (`domain`, `clientId`, `audience` — none of these are secrets for a SPA).
 - `App.jsx`: shows a login button when signed out; once signed in, it reads the
   access token with `getAccessTokenSilently()` and calls `GET /api/risk-status`
-  with `Authorization: Bearer <token>`.
+  with `Authorization: Bearer <token>`. The call is wrapped in `try/catch` and
+  checks `response.ok` before parsing the body, so a rejected or expired token
+  shows the real HTTP status instead of an unhandled error.
 
 **Deliverable — successful authenticated API call**
 

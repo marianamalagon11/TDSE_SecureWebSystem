@@ -13,11 +13,19 @@ function App() {
   const [result, setResult] = useState('')
 
   async function callApi() {
-    const token = await getAccessTokenSilently()
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/risk-status`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    setResult(JSON.stringify(await response.json(), null, 2))
+    try {
+      const token = await getAccessTokenSilently()
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/risk-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const body = await response.text()
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}${body ? `: ${body}` : ''}`)
+      }
+      setResult(JSON.stringify(JSON.parse(body), null, 2))
+    } catch (error) {
+      setResult(`Request failed: ${error.message}`)
+    }
   }
 
   if (isLoading) {
