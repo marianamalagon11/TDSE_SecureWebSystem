@@ -81,7 +81,7 @@ _Pending deployment (Part 6)._
 - [x] Part 2 — Spring Boot backend (local)
 - [x] Part 3 — React frontend (local)
 - [x] Part 4 — Server preparation and Duck DNS
-- [ ] Part 5 — Backend deployment (systemd)
+- [x] Part 5 — Backend deployment (systemd)
 - [ ] Part 6 — Apache and HTTPS
 - [ ] Part 7 — Verification and evidence
 
@@ -244,10 +244,52 @@ SSH connection details confirming the Ubuntu instance and key pair:
 
 ![curl showing HTTP 200 from Apache via the Duck DNS hostname](docs/images/15-apache-http-200-verification.png)
 
+## Backend deployment
+
+- Built locally with `mvn clean package`, copied to the server with `scp` (over the
+  already-restricted SSH connection), never built on the server itself.
+- Runs under a dedicated, non-login system user (`riskapi`), owning only
+  `/opt/enterprise-risk-api`.
+- `enterprise-risk-api.service` (kept at
+  [`docs/deploy/enterprise-risk-api.service`](docs/deploy/enterprise-risk-api.service)
+  for reference, installed at `/etc/systemd/system/`) runs the JAR with
+  `Restart=always` and injects the Auth0 issuer/audience as environment variables —
+  no secrets, same values as `application.properties`, just overridable without
+  rebuilding the JAR. Fixed a missing closing quote and trailing slash in the
+  `issuer-uri` present in the workshop's example unit file.
+- Managed with `systemctl enable --now`, so it starts automatically on boot.
+
+**Evidence**
+
+SSH connection to the server:
+
+![SSH connection to the EC2 instance](docs/images/16-ssh-connected.png)
+
+`riskapi` system user and the deployed JAR, owned by it:
+
+![riskapi user and the app.jar file under /opt/enterprise-risk-api](docs/images/17-riskapi-user-and-jar.png)
+
+The installed systemd unit:
+
+![Contents of the enterprise-risk-api.service file](docs/images/18-systemd-service-file.png)
+
+Service active and running:
+
+![systemctl status showing the service active and running](docs/images/19-systemd-service-active.png)
+
+Health check reachable locally on the server:
+
+![curl showing HTTP 200 from the local health endpoint](docs/images/20-backend-local-health-200.png)
+
+Port 8080 confirmed **not** reachable from the public internet:
+
+![curl to the public IP on port 8080 timing out](docs/images/21-backend-public-8080-blocked.png)
+
 ## Repository structure
 
 ```
 frontend/     React application (added in Part 3)
 backend/      Spring Boot application (added in Part 2)
 docs/images/  Evidence screenshots gathered throughout the workshop
+docs/deploy/  Server configuration files (systemd unit, Apache vhost)
 ```
