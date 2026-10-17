@@ -83,7 +83,7 @@ Browser
 - [x] Part 4 — Server preparation and Duck DNS
 - [x] Part 5 — Backend deployment (systemd)
 - [x] Part 6 — Apache and HTTPS
-- [ ] Part 7 — Verification and evidence
+- [x] Part 7 — Verification and evidence
 
 ## Auth0 configuration
 
@@ -313,6 +313,7 @@ Port 8080 confirmed **not** reachable from the public internet:
   production HTTPS address alongside `http://localhost:5173`.
 
 Verified:
+
 - `http://...duckdns.org` → `301` redirect to `https://...duckdns.org`.
 - CORS preflight (`OPTIONS`) from the production origin returns
   `Access-Control-Allow-Origin: https://enterprise-risk-lab-mariana.duckdns.org`.
@@ -338,6 +339,49 @@ Browser confirming the certificate is valid:
 Full certificate chain details (issuer Let's Encrypt, validity period, fingerprints):
 
 ![Certificate viewer showing issuer, validity period, and SHA-256 fingerprints](docs/images/25-production-certificate-details.png)
+
+## Verification checklist
+
+- [x] Unauthenticated requests to `/api/risk-status` return `401`. Also verified
+  with a malformed/garbage bearer token, confirming the backend validates the JWT
+  signature, not just its presence.
+- [x] A logged-in user can call `/api/risk-status` from the frontend — see the
+  production evidence above.
+- [x] The backend validates the JWT issuer and audience (`issuer-uri` and
+  `audiences` in `application.properties` / the systemd unit's environment
+  variables; confirmed by the `read:risk` permission and `audience`-scoped grant
+  working end to end, and by requests being rejected before this was correctly
+  wired in Part 1).
+- [x] The application is available at
+  **https://enterprise-risk-lab-mariana.duckdns.org**.
+- [x] The browser shows a valid certificate — see the certificate evidence above.
+- [x] Port `8080` is not reachable from the public internet (verified both right
+  after deployment in Part 5 and again here in Part 7).
+- [x] `sudo certbot renew --dry-run` succeeds — "Congratulations, all simulated
+  renewals succeeded."
+
+## Risk-control reflection
+
+| Control | Risk reduced | Evidence |
+|---|---|---|
+| Auth0 authentication | Impersonation and weak credential handling | Auth0 login flow and user identity ([Part 1](#auth0-configuration), [Part 3](#frontend-local)) |
+| JWT validation at the API | Unauthorized API access | `401` without a valid token, and with an invalid one (checklist above) |
+| Audience validation | Token reuse against another API | API only accepts tokens issued for `https://enterprise-risk-api`; configured via `spring.security.oauth2.resourceserver.jwt.audiences` |
+| HTTPS with a valid certificate | Credential or token exposure in transit | Browser certificate details ([Part 6](#apache-and-https)), HTTP→HTTPS redirect |
+| Apache reverse proxy | Direct exposure of the application port | Only ports 80/443 are public; port 8080 confirmed unreachable ([Part 5](#backend-deployment), [Part 7](#verification-checklist)) |
+| Central service logs | Delayed incident investigation | `journalctl -u enterprise-risk-api` on the server (systemd captures stdout/stderr automatically) |
+
+`sudo journalctl -u enterprise-risk-api --no-pager -n 20` on the server:
+
+```
+Oct 17 20:30:15 ip-172-31-16-134 systemd[1]: Started enterprise-risk-api.service - Enterprise Risk API.
+Oct 17 20:30:17 ip-172-31-16-134 java[1346]: ... Starting BackendApplication v0.0.1-SNAPSHOT using Java 21.0.12.1 ...
+Oct 17 20:30:19 ip-172-31-16-134 java[1346]: ... Tomcat started on port 8080 (http) with context path '/'
+Oct 17 20:30:21 ip-172-31-16-134 java[1346]: ... Started BackendApplication in 5.235 seconds
+```
+
+No access tokens, passwords, or other sensitive values appear in these logs —
+only startup and framework lifecycle events.
 
 ## Repository structure
 
