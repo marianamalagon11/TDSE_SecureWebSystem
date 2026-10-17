@@ -72,7 +72,7 @@ Browser
 
 ## Deployed URL
 
-_Pending deployment (Part 6)._
+**https://enterprise-risk-lab-mariana.duckdns.org**
 
 ## Progress
 
@@ -82,7 +82,7 @@ _Pending deployment (Part 6)._
 - [x] Part 3 — React frontend (local)
 - [x] Part 4 — Server preparation and Duck DNS
 - [x] Part 5 — Backend deployment (systemd)
-- [ ] Part 6 — Apache and HTTPS
+- [x] Part 6 — Apache and HTTPS
 - [ ] Part 7 — Verification and evidence
 
 ## Auth0 configuration
@@ -100,9 +100,9 @@ this is a Single-Page Application.
 | API | `Enterprise Risk Lab API` | Signing algorithm: `RS256` |
 | API Permission | `read:risk` | Read the protected risk status |
 
-Allowed Callback/Logout/Web Origin URLs for the SPA are currently set to
-`http://localhost:5173` for local development. They will be extended with the
-production Duck DNS URL in Part 6.
+Allowed Callback/Logout/Web Origin URLs for the SPA: `http://localhost:5173` for
+local development, plus `https://enterprise-risk-lab-mariana.duckdns.org` for the
+deployed site.
 
 `Enterprise Risk Lab Frontend` was granted **User-Delegated Access** (not Client
 Access, which is for machine-to-machine applications and would not authorize a
@@ -284,6 +284,60 @@ Health check reachable locally on the server:
 Port 8080 confirmed **not** reachable from the public internet:
 
 ![curl to the public IP on port 8080 timing out](docs/images/21-backend-public-8080-blocked.png)
+
+## Apache and HTTPS
+
+- The backend was rebuilt and redeployed with the production origin
+  (`https://enterprise-risk-lab-mariana.duckdns.org`) added to
+  `SecurityConfig.java`'s CORS configuration, replacing the earlier placeholder.
+- The frontend was rebuilt for production with
+  `VITE_API_URL=https://enterprise-risk-lab-mariana.duckdns.org` (overriding
+  `.env.local` for that one build via a shell environment variable, instead of
+  editing the file), then copied to `/var/www/enterprise-risk-frontend`.
+- Apache modules enabled: `ssl proxy proxy_http rewrite headers`.
+- Virtual host kept at
+  [`docs/deploy/enterprise-risk.conf`](docs/deploy/enterprise-risk.conf) (installed
+  at `/etc/apache2/sites-available/`): serves the React build as static files,
+  falls back to `index.html` for client-side routing, and reverse-proxies `/api/*`
+  to the local Spring Boot process.
+- Certificate obtained with
+  `sudo certbot --apache -d enterprise-risk-lab-mariana.duckdns.org --redirect`,
+  which also wrote `enterprise-risk-le-ssl.conf` for port 443 and scheduled
+  automatic renewal.
+- **Bug found and fixed**: certbot's HTTP→HTTPS redirect rule was added at the
+  `VirtualHost` scope, but `RewriteEngine On` was only declared inside the
+  `<Directory>` block (for the SPA fallback rule) — in Apache, rewrite engine
+  state does not propagate out of a narrower scope, so the redirect never fired
+  silently. Fixed by adding `RewriteEngine On` at the `VirtualHost` level too.
+- Auth0's Allowed Callback/Logout/Web Origin URLs were updated to include the
+  production HTTPS address alongside `http://localhost:5173`.
+
+Verified:
+- `http://...duckdns.org` → `301` redirect to `https://...duckdns.org`.
+- CORS preflight (`OPTIONS`) from the production origin returns
+  `Access-Control-Allow-Origin: https://enterprise-risk-lab-mariana.duckdns.org`.
+- `sudo certbot renew --dry-run` → "Congratulations, all simulated renewals
+  succeeded."
+- Certificate: issued by Let's Encrypt, `CN=enterprise-risk-lab-mariana.duckdns.org`,
+  valid until 2027-01-15.
+
+**Deliverable — production login, authenticated API call, and valid certificate**
+
+Logged in on the production URL:
+
+![Logged in on the production HTTPS URL](docs/images/22-production-logged-in.png)
+
+Successful authenticated API call in production:
+
+![Successful authenticated API call on the deployed site](docs/images/23-production-authenticated-api-call.png)
+
+Browser confirming the certificate is valid:
+
+![Browser security panel showing the connection is secure and the certificate is valid](docs/images/24-production-valid-certificate.png)
+
+Full certificate chain details (issuer Let's Encrypt, validity period, fingerprints):
+
+![Certificate viewer showing issuer, validity period, and SHA-256 fingerprints](docs/images/25-production-certificate-details.png)
 
 ## Repository structure
 
